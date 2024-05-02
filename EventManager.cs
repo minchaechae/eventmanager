@@ -1,83 +1,89 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Linq;
 using UnityEngine;
 
 public enum EventType
 {
-    // Add event type
+    // Define event types here
+
 }
 
-public static class EventManager
+public class EventManager : MonoBehaviour
 {
     private static Dictionary<EventType, List<Delegate>> eventTable = new Dictionary<EventType, List<Delegate>>();
 
-    public static void Subscribe(EventType eventName, Action listener)
-    {
-        Subscribe(eventName, (Delegate)listener);
-    }
+    // Generic method to add a listener for any type of event
+    public static void AddListener<T>(EventType eventName, Action<T> listener) => AddListenerInternal(eventName, listener);
 
-    public static void Subscribe(EventType eventName, Action<object> listener)
-    {
-        Subscribe(eventName, (Delegate)listener);
-    }
+    // Non-generic overload for parameterless events
+    public static void AddListener(EventType eventName, Action listener) => AddListenerInternal(eventName, listener);
 
-    private static void Subscribe(EventType eventName, Delegate listener)
+    // Generic method to remove a listener for any type of event
+    public static void RemoveListener<T>(EventType eventName, Action<T> listener) => RemoveListenerInternal(eventName, listener);
+
+    // Non-generic overload for parameterless events
+    public static void RemoveListener(EventType eventName, Action listener) => RemoveListenerInternal(eventName, listener);
+
+    // Internal method to add a listener to the dictionary
+    private static void AddListenerInternal(EventType eventName, Delegate listener)
     {
-        if (eventTable.ContainsKey(eventName))
+        if (!eventTable.TryGetValue(eventName, out var listeners))
         {
-            eventTable[eventName].Add(listener);
+            listeners = new List<Delegate>();
+            eventTable[eventName] = listeners;
         }
-        else
+        if (!listeners.Contains(listener))
         {
-            eventTable[eventName] = new List<Delegate> { listener };
+            listeners.Add(listener);
         }
     }
 
-    public static void Unsubscribe(EventType eventName, Action listener)
+    // Internal method to remove a listener from the dictionary
+    private static void RemoveListenerInternal(EventType eventName, Delegate listener)
     {
-        Unsubscribe(eventName, (Delegate)listener);
-    }
-
-    public static void Unsubscribe(EventType eventName, Action<object> listener)
-    {
-        Unsubscribe(eventName, (Delegate)listener);
-    }
-
-    private static void Unsubscribe(EventType eventName, Delegate listener)
-    {
-        if (eventTable.ContainsKey(eventName))
+        if (eventTable.TryGetValue(eventName, out var listeners))
         {
-            eventTable[eventName].Remove(listener);
-
-            if (eventTable[eventName].Count == 0)
+            listeners.Remove(listener);
+            if (listeners.Count == 0)
             {
                 eventTable.Remove(eventName);
             }
         }
     }
 
-    public static void TriggerEvent(EventType eventName)
+    // Generic method to trigger an event for any type of parameter
+    public static void TriggerEvent<T>(EventType eventName, T parameter = default)
     {
-        TriggerEvent(eventName, null);
+        if (!eventTable.TryGetValue(eventName, out var listeners)) return;
+        InvokeAll(listeners, parameter);
     }
 
-    public static void TriggerEvent(EventType eventName, object parameter)
+    // Non-generic overload for parameterless events
+    public static void TriggerEvent(EventType eventName)
     {
-        if (eventTable.ContainsKey(eventName))
+        if (!eventTable.TryGetValue(eventName, out var listeners)) return;
+        InvokeAll(listeners);
+    }
+
+    // Internal method to invoke all listeners for an event with a parameter
+    private static void InvokeAll<T>(List<Delegate> listeners, T parameter)
+    {
+        var listenersCopy = new List<Delegate>(listeners);
+        foreach (Action<T> action in listenersCopy)
         {
-            foreach (var listener in eventTable[eventName])
-            {
-                if (listener is Action actionListener)
-                {
-                    actionListener?.Invoke();
-                }
-                else if (listener is Action<object> actionObjectListener)
-                {
-                    actionObjectListener?.Invoke(parameter);
-                }
-            }
+            action.Invoke(parameter);
+        }
+    }
+
+    // Internal method to invoke all listeners for a parameterless event
+    private static void InvokeAll(List<Delegate> listeners)
+    {
+        var listenersCopy = new List<Delegate>(listeners);
+        foreach (Action action in listenersCopy)
+        {
+            action.Invoke();
         }
     }
 }
