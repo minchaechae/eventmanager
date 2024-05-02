@@ -1,47 +1,102 @@
-# Sample Code
-## Subscribe to/Unsubscribe from events
-    private void Start()
+# 💡 How to use EventManager
+## 1. Define Event Types
+Define some event types in your 'EventType' enum.
+
+```C#
+// EventManager.cs
+
+public enum EventType
+{
+    PlayerHealthChanged,
+    EnemyKilled,
+    GameStarted,
+    GameOver
+}
+```
+
+## 2. Create Event Listeners
+Listeners are methods that respond when an event is triggered.<br/>
+You can create multiple listeners for a single event.
+
+```C#
+// A.cs
+
+void OnPlayerHealthChanged(int newHealth)
+{
+    Debug.Log($"Player health changed to {newHealth}");
+}
+
+void OnEnemyKilled()
+{
+    Debug.Log("An enemy was killed!");
+}
+
+void OnGameStarted()
+{
+    Debug.Log("Game Started!");
+}
+
+void OnGameOver()
+{
+    Debug.Log("Game Over!");
+}
+```
+
+## 3. Register Event Listeners
+Register these listeners with the 'EventManager' so that they can be called when the relevant events are triggered.
+
+```C#
+// A.cs
+
+void Start()
+{
+    EventManager.AddListener<int>(EventType.PlayerHealthChanged, OnPlayerHealthChanged);
+    EventManager.AddListener(EventType.EnemyKilled, OnEnemyKilled);
+    EventManager.AddListener(EventType.GameStarted, OnGameStarted);
+    EventManager.AddListener(EventType.GameOver, OnGameOver);
+}
+```
+
+## 4. Trigger Events
+Events can be triggered from anywhere in the code, assuming the events have listeners registered.
+
+```C#
+// B.cs
+
+void Update()
+{
+    if (Input.GetKeyDown(KeyCode.P))
     {
-        meshRenderer = GetComponent<MeshRenderer>();
-        EventManager.Subscribe(EventType.EffectSelected, OnEffectSelected);
-        EventManager.Subscribe(EventType.NothingSelected, OnEffectUnselected);
+        EventManager.TriggerEvent<int>(EventType.PlayerHealthChanged, 90);
     }
 
-    private void OnEffectSelected(object ob)
+    if (Input.GetKeyDown(KeyCode.K))
     {
-        if ((GameObject)ob == this.gameObject)
-        {
-            meshRenderer.enabled = true;
-        }
-        else
-        {
-            meshRenderer.enabled = false;
-        }
+        EventManager.TriggerEvent(EventType.EnemyKilled);
     }
 
-    private void OnEffectUnselected()
+    if (Input.GetKeyDown(KeyCode.S))
     {
-        meshRenderer.enabled = false;
+        EventManager.TriggerEvent(EventType.GameStarted);
     }
 
-    private void OnDestroy()
+    if (Input.GetKeyDown(KeyCode.G))
     {
-        EventManager.Unsubscribe(EventType.EffectSelected, OnEffectSelected);
-        EventManager.Unsubscribe(EventType.NothingSelected, OnEffectUnselected);
+        EventManager.TriggerEvent(EventType.GameOver);
     }
+}
+```
 
-  ## Invoke events
-    if (Physics.Raycast(lineOut, out hit))
-    {
-        endPosition = hit.point;
+## 5. Unregister Event Listeners
+Especially in cases where objects can be destroyed, you should unregister event listeners to prevent memory leaks or unwanted behavior.
+```C#
+// A.cs
 
-        var ob = hit.collider.gameObject;
-        if (ob.layer == LayerMask.NameToLayer("Effect"))
-            EventManager.TriggerEvent(EventType.EffectSelected, ob);
-        else
-            EventManager.TriggerEvent(EventType.NothingSelected);
-    }
-    else
-    {
-        EventManager.TriggerEvent(EventType.NothingSelected);
-    }
+void OnDestroy()
+{
+    EventManager.RemoveListener<int>(EventType.PlayerHealthChanged, OnPlayerHealthChanged);
+    EventManager.RemoveListener(EventType.EnemyKilled, OnEnemyKilled);
+    EventManager.RemoveListener(EventType.GameStarted, OnGameStarted);
+    EventManager.RemoveListener(EventType.GameOver, OnGameOver);
+}
+```
